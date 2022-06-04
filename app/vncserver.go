@@ -1,4 +1,4 @@
-package agent_server
+package app
 
 import (
 	"bytes"
@@ -14,7 +14,6 @@ import (
 	"os"
 	"single-agent/pkg/customexec"
 	"single-agent/pkg/desktop"
-	"single-agent/pkg/proto/agent"
 	"single-agent/pkg/vncpasswd"
 	"time"
 )
@@ -49,8 +48,8 @@ type vncServer struct {
 	xVnc       *desktop.XVnc
 }
 
-// 创建vnc服务
-func newVncServer() *vncServer {
+// NewVncServer 创建vnc服务
+func NewVncServer() *vncServer {
 	hostname, _ := os.Hostname()
 	return &vncServer{
 		hostname: hostname,
@@ -58,22 +57,18 @@ func newVncServer() *vncServer {
 }
 
 // VncStart 启动vnc服务
-func (that *vncServer) VncStart(vncConn *agent.VncConn, user *agent.StartUser) (*agent.VncConn, error) {
+func (that *vncServer) VncStart(user *StartUser) (*VncConnParams, error) {
 	val, err := gcache.Get(StartWorkSpaceVncKey)
 	if err != nil {
 		return nil, err
 	}
 	if val != nil {
-		vncSvr := val.(*agent.VncConn)
+		vncSvr := val.(*VncConnParams)
 		return vncSvr, nil
 	}
 
-	if len(vncConn.VncPasswd) <= 0 || len(vncConn.VncPasswd) > 8 {
+	if len(user.VncPasswd) <= 0 || len(user.VncPasswd) > 8 {
 		return nil, gerror.New("vnc passwd not found.")
-	}
-
-	if len(vncConn.ProxyId) <= 0 || len(vncConn.ProxyPasswd) <= 0 {
-		return nil, gerror.New("proxy id or proxy passwd not found.")
 	}
 
 	if len(user.Home) <= 0 {
@@ -90,7 +85,7 @@ func (that *vncServer) VncStart(vncConn *agent.VncConn, user *agent.StartUser) (
 	if user.GroupId == 0 {
 		user.GroupId = 1000
 	}
-	that.init(user, vncConn.VncPasswd)
+	that.init(user)
 	err = that.startXVnc()
 	if err != nil {
 		return nil, err
@@ -101,25 +96,23 @@ func (that *vncServer) VncStart(vncConn *agent.VncConn, user *agent.StartUser) (
 	if err != nil {
 		return nil, err
 	}
-	conn := &agent.VncConn{
-		VncPasswd:   vncConn.VncPasswd,
-		ProxyId:     vncConn.ProxyId,
-		ProxyPasswd: vncConn.ProxyPasswd,
-		ProxyAddr:   vncConn.ProxyAddr,
+	conn := &VncConnParams{
+		VncPasswd: user.VncPasswd,
+		Host:      "127.0.0.1",
+		Port:      5900,
 	}
-	gcache.Set(StartWorkSpaceVncKey, conn, 0)
-	gcache.Set(vncConn.ProxyId, vncConn.ProxyPasswd, 0)
+	_ = gcache.Set(StartWorkSpaceVncKey, conn, 0)
 	return conn, nil
 }
 
 // Init 初始化参数
-func (that *vncServer) init(user *agent.StartUser, vncPasswd string) {
-	that.home = user.GetHome()
-	that.user = user.GetUserName()
-	that.group = user.GetGroupName()
-	that.uid = int(user.GetUserId())
-	that.gid = int(user.GetGroupId())
-	that.vncPasswd = vncPasswd
+func (that *vncServer) init(user *StartUser) {
+	that.home = user.Home
+	that.user = user.UserName
+	that.group = user.GroupName
+	that.uid = int(user.UserId)
+	that.gid = int(user.GroupId)
+	that.vncPasswd = user.VncPasswd
 
 	that.sessionName = genv.Get("VNC_SESSION_NAME", "xfce")
 	if that.sessionName == "" {
@@ -135,6 +128,7 @@ func (that *vncServer) init(user *agent.StartUser, vncPasswd string) {
 
 // CreateVncPasswd 创建vnc密码
 func (that *vncServer) createVncPasswd(password string) error {
+	fmt.Println("password:", password)
 	passwd := vncpasswd.AuthVNCEncode(gconv.Bytes(password))
 	path := fmt.Sprintf("%s/.vnc/passwd", that.home)
 	err := gfile.PutBytes(path, passwd)
@@ -209,7 +203,7 @@ func (that *vncServer) startDesktop() error {
 		return err
 	}
 	that.display = xfce.Display
-	entry, err := SvrSBox.ProcManager().NewProcessByEntry(procEntry)
+	entry, err := sandbox.ProcManager().NewProcessByEntry(procEntry)
 	if err != nil {
 		return err
 	}
@@ -222,11 +216,13 @@ func (that *vncServer) startXVnc() error {
 	// 创建vnc密码
 	err := that.createVncPasswd(that.vncPasswd)
 	if err != nil {
+		logger.Error(err)
 		return err
 	}
 	//创建连接X服务器的认证信息
 	err = that.createXAuth()
 	if err != nil {
+		logger.Error(err)
 		return err
 	}
 	// 启动xvnc
@@ -242,10 +238,12 @@ func (that *vncServer) startXVnc() error {
 	that.xVnc.LogPath = that.desktopLog
 	procEntry, err := that.xVnc.NewXVncProcess()
 	if err != nil {
+		logger.Error(err)
 		return err
 	}
-	entry, err := SvrSBox.ProcManager().NewProcessByEntry(procEntry)
+	entry, err := sandbox.ProcManager().NewProcessByEntry(procEntry)
 	if err != nil {
+		logger.Error(err)
 		return err
 	}
 	entry.Start(false)

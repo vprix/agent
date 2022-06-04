@@ -1,25 +1,15 @@
-package proxy
+package app
 
 import (
-	"bitcloud-proxy/library"
-	"bitcloud-proxy/vncproxy/encodings"
-	"bitcloud-proxy/vncproxy/handler"
-	"bitcloud-proxy/vncproxy/messages"
-	"bitcloud-proxy/vncproxy/pkg/dbuffer"
-	"bitcloud-proxy/vncproxy/rfb"
-	"bitcloud-proxy/vncproxy/security"
-	"bitcloud-proxy/vncproxy/session"
-	"crypto/tls"
-	"crypto/x509"
-	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/gogf/gf/encoding/gjson"
-	"github.com/gogf/gf/errors/gerror"
-	"github.com/gogf/gf/net/gtcp"
-	"github.com/gogf/gf/os/glog"
-	"github.com/gogf/gf/os/gres"
 	"github.com/gogf/gf/util/gconv"
+	"github.com/vprix/vncproxy/encodings"
+	"github.com/vprix/vncproxy/handler"
+	"github.com/vprix/vncproxy/messages"
+	"github.com/vprix/vncproxy/rfb"
+	"github.com/vprix/vncproxy/security"
+	"github.com/vprix/vncproxy/session"
 	"golang.org/x/net/websocket"
 	"net"
 	"time"
@@ -36,11 +26,11 @@ type WSVncProxy struct {
 	vncSvr2ProxyMsgChan    chan rfb.ServerMessage // vnc服务端发送给proxy客户端的消息通道
 	vncCli2ProxyMsgChan    chan rfb.ClientMessage // vnc客户端发送给proxy服务端的消息通道
 	proxySvr2VncCliMsgChan chan rfb.ServerMessage // proxy服务端发送给vnc客户端的消息通道
-	vncConnParams          *library.VncConnParams
+	vncConnParams          *VncConnParams
 }
 
 // NewWSVncProxy 生成vnc proxy服务对象
-func NewWSVncProxy(svrCfg *rfb.ServerConfig, cliCfg *rfb.ClientConfig, vncConnParams *library.VncConnParams) *WSVncProxy {
+func NewWSVncProxy(svrCfg *rfb.ServerConfig, cliCfg *rfb.ClientConfig, vncConnParams *VncConnParams) *WSVncProxy {
 	errorChan := make(chan error, 32)
 	vncProxy := &WSVncProxy{
 		errorCh:                errorChan,
@@ -60,8 +50,8 @@ func NewWSVncProxy(svrCfg *rfb.ServerConfig, cliCfg *rfb.ClientConfig, vncConnPa
 // Start 启动
 func (that *WSVncProxy) Start(ws *websocket.Conn) {
 	ws.PayloadType = websocket.BinaryFrame
-	that.rfbSvrCfg.ClientMessageCh = that.vncCli2ProxyMsgChan
-	that.rfbSvrCfg.ServerMessageCh = that.proxySvr2VncCliMsgChan
+	that.rfbSvrCfg.Input = that.vncCli2ProxyMsgChan
+	that.rfbSvrCfg.Output = that.proxySvr2VncCliMsgChan
 	that.rfbSvrCfg.ErrorCh = make(chan error)
 	if len(that.rfbSvrCfg.Messages) <= 0 {
 		that.rfbSvrCfg.Messages = messages.DefaultClientMessage
@@ -105,7 +95,7 @@ func (that *WSVncProxy) handleIO() {
 				}
 			}
 			if !disabled {
-				sSessCfg.ServerMessageCh <- msg
+				sSessCfg.Output <- msg
 			}
 		case msg := <-that.vncCli2ProxyMsgChan:
 			// vnc客户端发送消息到proxy服务端的时候,需要对消息进行检查
@@ -157,28 +147,14 @@ func (that *WSVncProxy) Handle(sess rfb.ISession) error {
 	if err != nil {
 		return err
 	}
-	// 写入认证信息
-	bb := dbuffer.GetByteBuffer()
-	defer dbuffer.ReleaseByteBuffer(bb)
-	jsonStr, _ := gjson.New(that.vncConnParams).ToJsonString()
-	//写入长度
-	_ = binary.Write(bb, binary.BigEndian, uint32(len(jsonStr)+2))
-	//写入版本
-	_ = binary.Write(bb, binary.BigEndian, uint16(1))
-	//写入参数
-	_, _ = bb.WriteString(jsonStr)
-	_, err = clientConn.Write(bb.Bytes())
-	if err != nil {
-		return fmt.Errorf("send packet to vnc target failed: %v", err)
-	}
 	// 配置链接信息
 	if that.rfbCliCfg == nil {
 		that.rfbCliCfg = &rfb.ClientConfig{
 			SecurityHandlers: []rfb.ISecurityHandler{&security.ClientAuthVNC{Password: gconv.Bytes(that.vncConnParams.VncPasswd)}},
 			Encodings:        encodings.DefaultEncodings,
 			ErrorCh:          make(chan error),
-			ServerMessageCh:  that.vncSvr2ProxyMsgChan,
-			ClientMessageCh:  that.proxyCli2VncSvrMsgChan,
+			Input:            that.vncSvr2ProxyMsgChan,
+			Output:           that.proxyCli2VncSvrMsgChan,
 			Handlers:         session.DefaultClientHandlers,
 			Messages:         messages.DefaultServerMessages,
 		}
@@ -204,51 +180,14 @@ func (that *WSVncProxy) newTarget(addr string, dialTimeout time.Duration) (net.C
 	if len(addr) == 0 {
 		return nil, errors.New("addr is empty")
 	}
-	//clientConn, err := net.DialTimeout("tcp", addr, dialTimeout)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//return clientConn, nil
 	if dialTimeout <= 0 {
 		dialTimeout = 10 * time.Second
 	}
-	cert, err := tls.X509KeyPair(gres.Get("cert/client.pem").Content(), gres.Get("cert/client.key").Content())
+	clientConn, err := net.DialTimeout("tcp", addr, dialTimeout)
 	if err != nil {
 		return nil, err
 	}
-	clientCertPool := x509.NewCertPool()
-	ok := clientCertPool.AppendCertsFromPEM(gres.Get("cert/client.pem").Content())
-	if !ok {
-		return nil, gerror.New("failed to parse root certificate")
-	}
-	conf := &tls.Config{
-		RootCAs:            clientCertPool,
-		Certificates:       []tls.Certificate{cert},
-		InsecureSkipVerify: true,
-		GetConfigForClient: func(clientHello *tls.ClientHelloInfo) (*tls.Config, error) {
-			// 检查底层是否使用的是tcp链接，如果是tcp链接，则为该链接设置
-			if tcpConn, ok := clientHello.Conn.(*net.TCPConn); ok {
-				if err = tcpConn.SetKeepAlive(true); err != nil {
-					glog.Println("Could not set keep alive", err)
-				}
-				if err = tcpConn.SetKeepAlivePeriod(69 * time.Second); err != nil {
-					glog.Println("Could not set keep alive period", err)
-				} else {
-					glog.Println("update keep alive period")
-				}
-			} else {
-				glog.Println("TLS over non-TCP connection")
-			}
-			return nil, nil
-		},
-	}
-	c, err := gtcp.NewNetConnTLS(addr, conf, dialTimeout)
-	//c, err := net.DialTimeout("tcp", addr, dialTimeout)
-	if err != nil {
-		return nil, gerror.Wrap(err, "cannot connect to vnc backend")
-	}
-
-	return c, nil
+	return clientConn, nil
 }
 
 func (that *WSVncProxy) Close() {

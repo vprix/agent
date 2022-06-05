@@ -18,8 +18,6 @@ func main() {
 				logger.Info("BeforeStop: agent server stop")
 				return true
 			})
-			//logger.SetDebug(true)
-			//_ = logger.SetLevelStr("all")
 			svr.AddSandBox(app.NewSandBoxServer(svr))
 		})
 	} else {

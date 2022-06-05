@@ -53,9 +53,9 @@ func (that *SandBoxServer) Setup() error {
 	that.svr.Group("/websockify", func(group *ghttp.RouterGroup) {
 		group.Middleware(MiddlewareCORS)
 		group.ALL("/", func(r *ghttp.Request) {
-			//token := r.GetString("token")
-			//if len(token) <= 0 {
-			//	logger.Warningf("token[%s] 不存在", token)
+
+			//if !r.Session.GetVar("isLogin", false).Bool() {
+			//	logger.Warningf("用户未登录")
 			//	r.Exit()
 			//	return
 			//}
@@ -66,7 +66,7 @@ func (that *SandBoxServer) Setup() error {
 				return
 			}
 			if val == nil {
-				//logger.Warningf("在cache中的token[%s]的val不存在", token)
+				logger.Warningf("vnc服务未启动")
 				r.Exit()
 				return
 			}
@@ -76,9 +76,9 @@ func (that *SandBoxServer) Setup() error {
 				Width:       1024,
 				Height:      768,
 				SecurityHandlers: []rfb.ISecurityHandler{
-					&security.ServerAuthVNC{Password: []byte("12345678")},
+					&security.ServerAuthNone{},
 				},
-				DisableMessageType: []rfb.ServerMessageType{rfb.ServerCutText},
+				//DisableMessageType: []rfb.ServerMessageType{rfb.ServerCutText},
 			}
 			vncConnParams := val.(*VncConnParams)
 			fmt.Println(vncConnParams)
@@ -95,7 +95,7 @@ func (that *SandBoxServer) Setup() error {
 	//	})
 	//})
 	that.vncSvr = NewVncServer()
-	_, err := that.vncSvr.VncStart(&StartUser{UserName: "vprix", GroupName: "vprix", VncPasswd: "12345678"})
+	_, err := that.vncSvr.VncStart(&StartUser{UserName: "vprix", GroupName: "vprix", VncPasswd: GetVncPassword()})
 	if err != nil {
 		return err
 	}

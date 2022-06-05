@@ -14,16 +14,6 @@ type UserCheck struct {
 
 type ControllerApiV1 struct{}
 
-func (that *ControllerApiV1) Start(r *ghttp.Request) {
-	vncSvr := NewVncServer()
-	_, err := vncSvr.VncStart(&StartUser{UserName: "vprix", GroupName: "vprix", VncPasswd: "12345678"})
-	if err != nil {
-		FailJson(true, r, "启动服务失败", err.Error())
-		return
-	}
-	SusJson(true, r, "启动成功")
-}
-
 // Login 登录
 func (that *ControllerApiV1) Login(r *ghttp.Request) {
 
@@ -33,14 +23,19 @@ func (that *ControllerApiV1) Login(r *ghttp.Request) {
 		FailJson(true, r, "用户名或密码错误")
 		return
 	}
-	uid := 1
-	err := r.Session.Set("uid", uid)
+	if username != GetUserName() || passwd != GetPassword() {
+		FailJson(true, r, "用户名或密码错误")
+		return
+	}
+	uid := 1000
+	err := r.Session.Set("username", username)
+	err = r.Session.Set("uid", uid)
 	_ = r.Session.Set("isLogin", true)
 	if err != nil {
 		FailJson(true, r, err.Error())
 		return
 	}
-	SusJson(true, r, "登录成功", g.Map{"uid": uid})
+	SusJson(true, r, "登录成功")
 }
 
 // Logout 用户退出登录

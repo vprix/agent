@@ -67,7 +67,7 @@ func (that *vncServer) VncStart(user *StartUser) (*VncConnParams, error) {
 		return vncSvr, nil
 	}
 
-	if len(user.VncPasswd) <= 0 || len(user.VncPasswd) > 8 {
+	if len(user.VncPasswd) <= 0 {
 		return nil, gerror.New("vnc passwd not found.")
 	}
 

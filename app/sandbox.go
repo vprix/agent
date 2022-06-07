@@ -5,6 +5,7 @@ import (
 	"github.com/gogf/gf/frame/g"
 	"github.com/gogf/gf/net/ghttp"
 	"github.com/gogf/gf/os/gcache"
+	"github.com/gogf/gf/os/genv"
 	"github.com/osgochina/dmicro/easyservice"
 	"github.com/osgochina/dmicro/logger"
 	"github.com/osgochina/dmicro/supervisor/process"
@@ -87,18 +88,22 @@ func (that *SandBoxServer) Setup() error {
 			h.ServeHTTP(r.Response.Writer, r.Request)
 		})
 	})
-	//that.svr.SetIndexFolder(false)
-	//that.svr.AddStaticPath("/static", gfile.MainPkgPath()+"/assets")
+	path := genv.GetVar("VPRIX_VNC_PATH", "/usr/share/vprixvnc")
+	that.svr.SetIndexFolder(false)
+	that.svr.AddStaticPath("/static", path.String()+"/assets")
 	//that.svr.Group("/static", func(group *ghttp.RouterGroup) {
 	//	group.GET("/", func(r *ghttp.Request) {
 	//		r.Response.Write(gres.Get(r.RequestURI))
 	//	})
 	//})
 	that.vncSvr = NewVncServer()
-	_, err := that.vncSvr.VncStart(&StartUser{UserName: "vprix", GroupName: "vprix", VncPasswd: GetVncPassword()})
-	if err != nil {
-		return err
-	}
+	go func() {
+		_, err := that.vncSvr.VncStart(&StartUser{UserName: "vprix-user", GroupName: "vprix-user", VncPasswd: GetVncPassword()})
+		if err != nil {
+			logger.Error(err)
+		}
+	}()
+
 	return that.svr.Start()
 }
 

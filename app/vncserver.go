@@ -72,11 +72,11 @@ func (that *vncServer) VncStart(user *StartUser) (*VncConnParams, error) {
 	}
 
 	if len(user.Home) <= 0 {
-		user.Home = "/home/vprix"
+		user.Home = "/home/vprix-user"
 	}
 
 	if len(user.UserName) <= 0 {
-		user.UserName = "vprix"
+		user.UserName = "vprix-user"
 	}
 
 	if user.UserId == 0 {

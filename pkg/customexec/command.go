@@ -22,7 +22,7 @@ func Command(name string, arg ...string) *Cmd {
 }
 
 func (that *Cmd) SetUser(username ...string) {
-	userName := "vprix"
+	userName := "vprix-user"
 	if len(username) > 0 && len(username[0]) > 0 {
 		userName = username[0]
 	}

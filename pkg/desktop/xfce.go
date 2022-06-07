@@ -65,7 +65,7 @@ func (that *Xfce) XStartup() (*process.ProcEntry, error) {
 	proc := process.NewProcEntry("/usr/bin/dbus-launch", []string{"startxfce4"})
 	proc.SetDirectory(that.Home)
 	//proc.SetUser(that.User)
-	proc.SetUser("vprix")
+	proc.SetUser("vprix-user")
 	// 初始化工具要使用的环境变量，后期需要放到一个统一的地方
 	proc.SetEnvironment(genv.All())
 	proc.SetAutoReStart("false")

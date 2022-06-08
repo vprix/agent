@@ -1,6 +1,7 @@
 package desktop
 
 import (
+	"agent/env"
 	"fmt"
 	"github.com/gogf/gf/errors/gerror"
 	"github.com/gogf/gf/os/genv"
@@ -65,7 +66,7 @@ func (that *Xfce) XStartup() (*process.ProcEntry, error) {
 	proc := process.NewProcEntry("/usr/bin/dbus-launch", []string{"startxfce4"})
 	proc.SetDirectory(that.Home)
 	//proc.SetUser(that.User)
-	proc.SetUser("vprix-user")
+	proc.SetUser(env.User())
 	// 初始化工具要使用的环境变量，后期需要放到一个统一的地方
 	proc.SetEnvironment(genv.All())
 	proc.SetAutoReStart("false")

@@ -1,6 +1,7 @@
 package desktop
 
 import (
+	"agent/env"
 	"fmt"
 	"github.com/gogf/gf/os/genv"
 	"github.com/gogf/gf/text/gstr"
@@ -27,7 +28,7 @@ func (that *XVnc) NewXVncProcess() (*process.ProcEntry, error) {
 	proc := process.NewProcEntry("/usr/bin/Xvnc")
 	proc.SetArgs(append([]string{fmt.Sprintf(":%d", that.DisplayNumber)}, that.opts.Array()...))
 	proc.SetDirectory(that.Dir)
-	proc.SetUser("vprix-user")
+	proc.SetUser(env.User())
 	proc.SetAutoReStart("false")
 	proc.SetRedirectStderr(true)
 	proc.SetStdoutLogfile(that.LogPath)

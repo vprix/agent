@@ -1,12 +1,12 @@
 package main
 
 import (
+	"agent/app"
 	"github.com/gogf/gf/os/gproc"
 	"github.com/osgochina/dmicro/easyservice"
 	"github.com/osgochina/dmicro/logger"
 	"github.com/osgochina/dmicro/supervisor/process"
 	"os"
-	"single-agent/app"
 )
 
 func main() {

@@ -1,8 +1,8 @@
 package desktop
 
 import (
+	"agent/pkg/customexec"
 	"github.com/gogf/gf/os/genv"
-	"single-agent/pkg/customexec"
 )
 
 // 命令说明 http://linux.51yip.com/search/xset

@@ -1,6 +1,10 @@
 package app
 
 import (
+	"agent/env"
+	"agent/pkg/customexec"
+	"agent/pkg/desktop"
+	"agent/pkg/vncpasswd"
 	"bytes"
 	"fmt"
 	"github.com/gogf/gf/errors/gerror"
@@ -12,9 +16,6 @@ import (
 	"github.com/gogf/gf/util/grand"
 	"github.com/osgochina/dmicro/logger"
 	"os"
-	"single-agent/pkg/customexec"
-	"single-agent/pkg/desktop"
-	"single-agent/pkg/vncpasswd"
 	"time"
 )
 
@@ -39,8 +40,6 @@ type vncServer struct {
 	display string
 	// 权限文件存放地址 "$ENV{HOME}/.Xauthority"
 	xAuthorityFile string
-	// 要启动的desktop的类型，比如xfce，gnome
-	sessionName string
 	//桌面名称
 	desktopName string
 	// 桌面启动的log
@@ -72,11 +71,11 @@ func (that *vncServer) VncStart(user *StartUser) (*VncConnParams, error) {
 	}
 
 	if len(user.Home) <= 0 {
-		user.Home = "/home/vprix-user"
+		user.Home = env.Home()
 	}
 
 	if len(user.UserName) <= 0 {
-		user.UserName = "vprix-user"
+		user.UserName = env.User()
 	}
 
 	if user.UserId == 0 {
@@ -114,10 +113,6 @@ func (that *vncServer) init(user *StartUser) {
 	that.gid = int(user.GroupId)
 	that.vncPasswd = user.VncPasswd
 
-	that.sessionName = genv.Get("VNC_SESSION_NAME", "xfce")
-	if that.sessionName == "" {
-		logger.Fatalf("VNC SESSION NAME[%s] 不可识别", that.sessionName)
-	}
 	that.xAuthorityFile = fmt.Sprintf("%s/.Xauthority", that.home)
 	that.vncPort = 5900
 	//桌面名
@@ -230,7 +225,6 @@ func (that *vncServer) startXVnc() error {
 	opts.Desktop = gstr.Trim(that.desktopName, "'", "\"")
 	opts.RfbAuth = fmt.Sprintf("%s/.vnc/passwd", that.home)
 	opts.RfbPort = that.vncPort
-	_ = genv.Set("VNC_RESOLUTION", opts.Geometry)
 	that.xVnc = desktop.NewXVnc(opts)
 	that.xVnc.User = that.user
 	that.xVnc.Dir = that.home

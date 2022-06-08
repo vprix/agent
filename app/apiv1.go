@@ -1,6 +1,7 @@
 package app
 
 import (
+	"agent/env"
 	"github.com/gogf/gf/frame/g"
 	"github.com/gogf/gf/net/ghttp"
 	"github.com/gogf/gf/os/gcache"
@@ -23,7 +24,7 @@ func (that *ControllerApiV1) Login(r *ghttp.Request) {
 		FailJson(true, r, "用户名或密码错误")
 		return
 	}
-	if username != GetUserName() || passwd != GetPassword() {
+	if username != env.UserName() || passwd != env.Password() {
 		FailJson(true, r, "用户名或密码错误")
 		return
 	}

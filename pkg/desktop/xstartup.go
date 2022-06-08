@@ -1,9 +1,9 @@
 package desktop
 
 import (
+	"agent/pkg/customexec"
 	"github.com/gogf/gf/os/genv"
 	"github.com/gogf/gf/util/gconv"
-	"single-agent/pkg/customexec"
 )
 
 type XStartup struct {

@@ -1,6 +1,7 @@
 package customexec
 
 import (
+	"agent/env"
 	"github.com/osgochina/dmicro/logger"
 	"os/exec"
 	"os/user"
@@ -22,7 +23,7 @@ func Command(name string, arg ...string) *Cmd {
 }
 
 func (that *Cmd) SetUser(username ...string) {
-	userName := "vprix-user"
+	userName := env.User()
 	if len(username) > 0 && len(username[0]) > 0 {
 		userName = username[0]
 	}

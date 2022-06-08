@@ -1,4 +1,4 @@
-module single-agent
+module agent
 
 go 1.16
 

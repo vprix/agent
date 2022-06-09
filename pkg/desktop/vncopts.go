@@ -387,6 +387,8 @@ func (that *XVncOpts) Array() []string {
 	if len(that.AllowOverride) > 0 {
 		args.Set("AllowOverride", that.AllowOverride)
 	}
+	// 取消xWindow窗口的监听
+	args.Set("nolisten", "tcp")
 	var params []string
 	for k, v := range args.Map() {
 		params = append(params, "-"+k)

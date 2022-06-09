@@ -44,7 +44,7 @@ type vncServer struct {
 	desktopName string
 	// 桌面启动的log
 	desktopLog string
-	xVnc       *desktop.XVnc
+	xInit      *desktop.XInit
 }
 
 // NewVncServer 创建vnc服务
@@ -85,16 +85,11 @@ func (that *vncServer) VncStart(user *StartUser) (*VncConnParams, error) {
 		user.GroupId = 1000
 	}
 	that.init(user)
-	err = that.startXVnc()
+	err = that.startXInit()
 	if err != nil {
 		return nil, err
 	}
 	time.Sleep(time.Second * 1)
-
-	err = that.startDesktop()
-	if err != nil {
-		return nil, err
-	}
 	conn := &VncConnParams{
 		VncPasswd: user.VncPasswd,
 		Host:      "127.0.0.1",
@@ -185,29 +180,34 @@ func (that *vncServer) createXAuth() error {
 }
 
 // 启动桌面进程
-func (that *vncServer) startDesktop() error {
-	xfce := desktop.NewXfce()
-	xfce.User = that.user
-	xfce.Home = that.home
-	xfce.DisplayNumber = that.displayNumber
-	xfce.Hostname = that.hostname
-	xfce.DesktopName = that.desktopName
-	xfce.LogPath = that.desktopLog
-	procEntry, err := xfce.XStartup()
-	if err != nil {
-		return err
-	}
-	that.display = xfce.Display
-	entry, err := sandbox.ProcManager().NewProcessByEntry(procEntry)
-	if err != nil {
-		return err
-	}
-	entry.Start(false)
-	return nil
-}
+//func (that *vncServer) startDesktop() (err error) {
+//	xfce := desktop.NewXfce()
+//	xfce.User = that.user
+//	xfce.Home = that.home
+//	xfce.DisplayNumber = that.displayNumber
+//	xfce.Hostname = that.hostname
+//	xfce.DesktopName = that.desktopName
+//	xfce.LogPath = that.desktopLog
+//	var procEntry *process.ProcEntry
+//	if env.IsUbuntu() {
+//		procEntry, err = xfce.XStartupUbuntu()
+//	} else {
+//		procEntry, err = xfce.XStartup()
+//	}
+//	if err != nil {
+//		return err
+//	}
+//	that.display = xfce.Display
+//	entry, err := sandbox.ProcManager().NewProcessByEntry(procEntry)
+//	if err != nil {
+//		return err
+//	}
+//	go entry.Start(true)
+//	return nil
+//}
 
 // 启动vnc进程
-func (that *vncServer) startXVnc() error {
+func (that *vncServer) startXInit() error {
 	// 创建vnc密码
 	err := that.createVncPasswd(that.vncPasswd)
 	if err != nil {
@@ -225,12 +225,12 @@ func (that *vncServer) startXVnc() error {
 	opts.Desktop = gstr.Trim(that.desktopName, "'", "\"")
 	opts.RfbAuth = fmt.Sprintf("%s/.vnc/passwd", that.home)
 	opts.RfbPort = that.vncPort
-	that.xVnc = desktop.NewXVnc(opts)
-	that.xVnc.User = that.user
-	that.xVnc.Dir = that.home
-	that.xVnc.DisplayNumber = that.displayNumber
-	that.xVnc.LogPath = that.desktopLog
-	procEntry, err := that.xVnc.NewXVncProcess()
+	that.xInit = desktop.NewXInit(opts)
+	that.xInit.SetUser(that.user)
+	that.xInit.SetChroot(that.home)
+	that.xInit.SetDisplayNumber(that.displayNumber)
+	that.xInit.SetLogPath(that.desktopLog)
+	procEntry, err := that.xInit.NewProcess()
 	if err != nil {
 		logger.Error(err)
 		return err
@@ -241,6 +241,5 @@ func (that *vncServer) startXVnc() error {
 		return err
 	}
 	entry.Start(false)
-
 	return nil
 }

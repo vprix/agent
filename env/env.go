@@ -61,3 +61,7 @@ func VncPassword() string {
 func VncOptions() string {
 	return genv.Get("VNC_OPTIONS", "")
 }
+
+func IsUbuntu() bool {
+	return genv.GetVar("DISTRO", "ubuntu").String() == "ubuntu"
+}

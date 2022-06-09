@@ -3,6 +3,7 @@ package app
 import (
 	"agent/env"
 	"fmt"
+	"github.com/gobuffalo/packr/v2"
 	"github.com/gogf/gf/frame/g"
 	"github.com/gogf/gf/net/ghttp"
 	"github.com/gogf/gf/os/gcache"
@@ -13,6 +14,7 @@ import (
 	"github.com/vprix/vncproxy/rfb"
 	"github.com/vprix/vncproxy/security"
 	"golang.org/x/net/websocket"
+	"net/http"
 )
 
 // SandBoxServer 容器启动后对外提供的管理接口，使用加密传输的rpc协议
@@ -88,8 +90,15 @@ func (that *SandBoxServer) Setup() error {
 			h.ServeHTTP(r.Response.Writer, r.Request)
 		})
 	})
-	that.svr.SetIndexFolder(false)
-	that.svr.AddStaticPath("/static", env.VprixAgentPath()+"/assets")
+	box := packr.New("novnc", "../assets/novnc")
+	that.svr.Group("/*", func(group *ghttp.RouterGroup) {
+		group.GET("/core/", func(r *ghttp.Request) {
+			http.FileServer(box).ServeHTTP(r.Response.Writer, r.Request)
+		})
+		group.GET("/", func(r *ghttp.Request) {
+			http.FileServer(box).ServeHTTP(r.Response.Writer, r.Request)
+		})
+	})
 
 	that.vncSvr = NewVncServer()
 	go func() {

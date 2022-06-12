@@ -107,10 +107,10 @@
     }
         // Read parameters specified in the URL query string
         // By default, use the host and port of server that served this file
-        const host = "127.0.0.1";
-        let port = 8080;
+        // const host = "127.0.0.1";
+        // let port = 8080;
         const path = "/websockify";
-
+        console.log(window.location.host)
         // | | |         | | |
         // | | | Connect | | |
         // v v v         v v v
@@ -124,10 +124,10 @@
         } else {
             url = 'ws';
         }
-        url += '://' + host;
-        if(port) {
-            url += ':' + port;
-        }
+        url += '://' + window.location.host;
+        // if(port) {
+        //     url += ':' + port;
+        // }
         url += path;
 
 

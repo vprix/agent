@@ -15,6 +15,7 @@ import (
 	"github.com/gogf/gf/util/gconv"
 	"github.com/gogf/gf/util/grand"
 	"github.com/osgochina/dmicro/logger"
+	"github.com/osgochina/dmicro/supervisor/process"
 	"os"
 	"time"
 )
@@ -90,6 +91,7 @@ func (that *vncServer) VncStart(user *StartUser) (*VncConnParams, error) {
 		return nil, err
 	}
 	time.Sleep(time.Second * 1)
+	that.beforeStart()
 	conn := &VncConnParams{
 		VncPasswd: user.VncPasswd,
 		Host:      "127.0.0.1",
@@ -242,4 +244,22 @@ func (that *vncServer) startXInit() error {
 	}
 	entry.Start(false)
 	return nil
+}
+
+// 启动xinit后，执行自定义脚本
+func (that *vncServer) beforeStart() {
+	if !gfile.Exists("/dockerstartup/custom_startup.sh") {
+		return
+	}
+	proc := process.NewProcEntry("/dockerstartup/custom_startup.sh")
+	proc.SetUser(that.user)
+	proc.SetAutoReStart("false")
+	proc.SetRedirectStderr(true)
+	proc.SetEnvironment(genv.All())
+	entry, err := sandbox.ProcManager().NewProcessByEntry(proc)
+	if err != nil {
+		logger.Error(err)
+		return
+	}
+	entry.Start(false)
 }

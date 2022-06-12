@@ -66,8 +66,7 @@ func (that *XInit) NewProcess() (*process.ProcEntry, error) {
 	// /usr/bin/xinit /usr/bin/dbus-launch startxfce4 --  /usr/bin/Xvnc :0 ......
 	proc.SetArgs(append(
 		[]string{
-			"/usr/bin/dbus-launch",
-			"startxfce4",
+			"/usr/bin/startxfce4",
 			"--",
 			"/usr/bin/Xvnc",
 			fmt.Sprintf(":%d", that.displayNumber)}, that.opts.Array()...),

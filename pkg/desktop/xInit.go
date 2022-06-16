@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/gogf/gf/os/genv"
 	"github.com/gogf/gf/text/gstr"
+	"github.com/gogf/gf/util/gconv"
 	"github.com/osgochina/dmicro/logger"
 	"github.com/osgochina/dmicro/supervisor/process"
 )
@@ -61,7 +62,16 @@ func (that *XInit) SetLogPath(logPath string) {
 	that.logPath = logPath
 }
 
+func (that *XInit) initEnv() {
+	_ = genv.Remove("SESSION_MANAGER")
+	_ = genv.Remove("DBUS_SESSION_BUS_ADDRESS")
+	_ = genv.Set("XDG_SESSION_TYPE", "x11")
+	_ = genv.Set("XKL_XMODMAP_DISABLE", gconv.String(1))
+	_ = genv.Set("DISPLAY", fmt.Sprintf(":%d", that.displayNumber))
+}
+
 func (that *XInit) NewProcess() (*process.ProcEntry, error) {
+	that.initEnv()
 	proc := process.NewProcEntry("/usr/bin/xinit")
 	// /usr/bin/xinit /usr/bin/dbus-launch startxfce4 --  /usr/bin/Xvnc :0 ......
 	proc.SetArgs(append(

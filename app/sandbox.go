@@ -2,7 +2,6 @@ package app
 
 import (
 	"agent/env"
-	"fmt"
 	"github.com/gobuffalo/packr/v2"
 	"github.com/gogf/gf/frame/g"
 	"github.com/gogf/gf/net/ghttp"
@@ -84,7 +83,6 @@ func (that *SandBoxServer) Setup() error {
 				//DisableMessageType: []rfb.ServerMessageType{rfb.ServerCutText},
 			}
 			vncConnParams := val.(*VncConnParams)
-			fmt.Println(vncConnParams)
 			vncProxy := NewWSVncProxy(svrCfg, nil, vncConnParams)
 			h := websocket.Handler(vncProxy.Start)
 			h.ServeHTTP(r.Response.Writer, r.Request)

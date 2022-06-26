@@ -113,29 +113,3 @@ func (that *ControllerApiV1) Join(r *ghttp.Request) {
 	token := ""
 	SusJson(true, r, "ok", g.Map{"token": token, "url": g.Cfg().GetString("base_url") + "/api/v1/manager"})
 }
-
-// Stop 强制停止实训机
-func (that *ControllerApiV1) Stop(r *ghttp.Request) {
-	uid := r.Session.GetInt("uid", 0)
-	if uid <= 0 {
-		FailJson(true, r, "请登录")
-		return
-	}
-	userComputerId := r.GetInt("user_computer_id", 0)
-	if userComputerId <= 0 {
-		FailJson(true, r, "请选择要停止的实训机")
-		return
-	}
-	SusJson(true, r, "停止成功")
-}
-
-// Clipboard 复制文本内容到实训机
-func (that *ControllerApiV1) Clipboard(r *ghttp.Request) {
-
-	text := r.GetString("text")
-	if len(text) <= 0 || len(text) > 4*1024 {
-		FailJson(true, r, "要复制的内容应该在4K以内")
-		return
-	}
-	SusJson(true, r, "ok", "复制成功")
-}

@@ -9,9 +9,6 @@ import (
 	"github.com/osgochina/dmicro/easyservice"
 	"github.com/osgochina/dmicro/logger"
 	"github.com/osgochina/dmicro/supervisor/process"
-	"github.com/vprix/vncproxy/encodings"
-	"github.com/vprix/vncproxy/rfb"
-	"github.com/vprix/vncproxy/security"
 	"golang.org/x/net/websocket"
 	"net/http"
 )
@@ -72,18 +69,8 @@ func (that *SandBoxServer) Setup() error {
 				r.Exit()
 				return
 			}
-			svrCfg := &rfb.ServerConfig{
-				Encodings:   encodings.DefaultEncodings,
-				DesktopName: []byte("VNC Proxy"),
-				Width:       1024,
-				Height:      768,
-				SecurityHandlers: []rfb.ISecurityHandler{
-					&security.ServerAuthNone{},
-				},
-				//DisableMessageType: []rfb.ServerMessageType{rfb.ServerCutText},
-			}
 			vncConnParams := val.(*VncConnParams)
-			vncProxy := NewWSVncProxy(svrCfg, nil, vncConnParams)
+			vncProxy := NewWSVncProxy(vncConnParams)
 			h := websocket.Handler(vncProxy.Start)
 			h.ServeHTTP(r.Response.Writer, r.Request)
 		})
